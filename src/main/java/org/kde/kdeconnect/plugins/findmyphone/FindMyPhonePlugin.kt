@@ -199,7 +199,7 @@ class FindMyPhonePlugin : Plugin() {
 
     override val supportedPacketTypes: Array<String> = arrayOf(PACKET_TYPE_FINDMYPHONE_REQUEST)
 
-    override val outgoingPacketTypes: Array<String> = ArrayUtils.EMPTY_STRING_ARRAY
+    override val outgoingPacketTypes: Array<String> = emptyArray()
 
     override fun hasSettings(): Boolean = true
 
@@ -210,7 +210,7 @@ class FindMyPhonePlugin : Plugin() {
         get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             arrayOf(Manifest.permission.POST_NOTIFICATIONS)
         } else {
-            ArrayUtils.EMPTY_STRING_ARRAY
+            emptyArray()
         }
 
     override val permissionExplanation: Int = R.string.findmyphone_notifications_explanation
