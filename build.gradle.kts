@@ -306,7 +306,6 @@ dependencies {
     implementation(libs.logger)
 
     implementation(libs.commons.io)
-    implementation(libs.commons.collections4)
 
     implementation(libs.univocity.parsers)
 

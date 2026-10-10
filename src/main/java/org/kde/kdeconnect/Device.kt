@@ -26,8 +26,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
-import org.apache.commons.collections4.MultiValuedMap
-import org.apache.commons.collections4.multimap.ArrayListValuedHashMap
 import org.kde.kdeconnect.DeviceInfo.Companion.loadFromSettings
 import org.kde.kdeconnect.DeviceStats.countReceived
 import org.kde.kdeconnect.DeviceStats.countSent
@@ -95,7 +93,7 @@ class Device : PacketReceiver {
     /**
      * Same as loadedPlugins but indexed by incoming packet type
      */
-    private var pluginsByIncomingInterface: MultiValuedMap<String, String> = ArrayListValuedHashMap()
+    private var pluginsByIncomingInterface: Map<String, List<String>> = emptyMap()
 
     private val pairingCallbacks = CopyOnWriteArrayList<PairingCallback>()
     private val pluginsChangedListeners = CopyOnWriteArrayList<PluginsChangedListener>()
@@ -436,7 +434,7 @@ class Device : PacketReceiver {
     }
 
     private fun notifyPluginPacketReceived(np: NetworkPacket) {
-        val targetPlugins = pluginsByIncomingInterface[np.type] // Returns an empty collection if the key doesn't exist
+        val targetPlugins = pluginsByIncomingInterface[np.type] ?: emptyList()
         if (targetPlugins.isEmpty()) {
             Log.w("Device", "Ignoring packet with type ${np.type} because no plugin can handle it")
 
@@ -659,7 +657,7 @@ class Device : PacketReceiver {
     @WorkerThread
     fun reloadPluginsFromSettings() {
         Log.i("Device", "${deviceInfo.name}: reloading plugins")
-        val newPluginsByIncomingInterface: MultiValuedMap<String, String> = ArrayListValuedHashMap()
+        val newPluginsByIncomingInterface = mutableMapOf<String, MutableList<String>>()
 
         val existingPluginKeys = loadedPlugins.keys + pluginsWithoutPermissions.keys + pluginsWithoutOptionalPermissions.keys
         (existingPluginKeys - supportedPlugins.toSet()).forEach(::removePlugin)
@@ -673,7 +671,7 @@ class Device : PacketReceiver {
             if (pluginEnabled) {
                 if (addPlugin(pluginKey)) {
                     pluginInfo.supportedPacketTypes.forEach { packetType ->
-                        newPluginsByIncomingInterface.put(packetType, pluginKey)
+                        newPluginsByIncomingInterface.getOrPut(packetType) { mutableListOf() }.add(pluginKey)
                     }
                 }
             } else {

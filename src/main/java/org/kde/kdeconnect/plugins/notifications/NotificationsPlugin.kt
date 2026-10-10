@@ -30,7 +30,6 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.graphics.createBitmap
 import androidx.fragment.app.DialogFragment
-import org.apache.commons.collections4.multimap.ArrayListValuedHashMap
 import org.json.JSONArray
 import org.json.JSONObject
 import org.kde.kdeconnect.NetworkPacket
@@ -53,7 +52,7 @@ class NotificationsPlugin : Plugin(), NotificationReceiver.NotificationListener 
     private val notificationsIcons = HashMap<String, String>()
     private val postedNotifications = HashSet<String>()
     private val pendingIntents = HashMap<String, RepliableNotification>()
-    private val pendingActions = ArrayListValuedHashMap<String, Notification.Action>()
+    private val pendingActions = mutableMapOf<String, MutableList<Notification.Action>>()
     private var serviceReady = false
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var keyguardManager: KeyguardManager
@@ -361,8 +360,7 @@ class NotificationsPlugin : Plugin(), NotificationReceiver.NotificationListener 
 
             jsonArray.put(title.toString())
 
-            // A list is automatically created if it doesn't already exist.
-            pendingActions.put(key, action)
+            pendingActions.getOrPut(key) { mutableListOf() }.add(action)
         }
 
         return jsonArray
@@ -498,14 +496,7 @@ class NotificationsPlugin : Plugin(), NotificationReceiver.NotificationListener 
         if (np.type == PACKET_TYPE_NOTIFICATION_ACTION) {
             val key = np.getString("key")
             val title = np.getString("action")
-            var intent: PendingIntent? = null
-
-            for (a in pendingActions.get(key)) {
-                if (a.title.contentEquals(title)) {
-                    intent = a.actionIntent
-                    break
-                }
-            }
+            val intent = pendingActions[key]?.firstOrNull { it.title?.contentEquals(title) == true }?.actionIntent
 
             if (intent != null) {
                 try {
