@@ -10,11 +10,9 @@ import android.content.res.Configuration
 import android.content.res.Resources
 import android.os.Build
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
-import com.univocity.parsers.common.TextParsingException
-import com.univocity.parsers.csv.CsvParser
-import com.univocity.parsers.csv.CsvParserSettings
 import org.kde.kdeconnect.DeviceInfo
 import org.kde.kdeconnect.DeviceType
 import org.kde.kdeconnect.helpers.security.SslHelper
@@ -89,11 +87,9 @@ object DeviceHelper {
                 BufferedReader(
                     InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_16)
                 ).use { reader ->
-                    val settings = CsvParserSettings()
-                    settings.isHeaderExtractionEnabled = true
-                    val parser = CsvParser(settings)
                     var found = false
-                    for (records in parser.iterate(reader)) {
+                    for (line in reader.lineSequence().drop(1)) {
+                        val records = parseCsvLine(line)
                         if (records.size < 4) {
                             continue
                         }
@@ -113,11 +109,36 @@ object DeviceHelper {
                 }
             } catch (e: IOException) {
                 e.printStackTrace()
-            } catch (e: TextParsingException) {
-                e.printStackTrace()
             }
             fetchingName = false
         }
+    }
+
+    @VisibleForTesting
+    internal fun parseCsvLine(line: String): List<String> {
+        val tokens = mutableListOf<String>()
+        val current = StringBuilder()
+        var inQuotes = false
+        var i = 0
+        while (i < line.length) {
+            val ch = line[i]
+            if (ch == '"') {
+                if (inQuotes && i + 1 < line.length && line[i + 1] == '"') {
+                    current.append('"')
+                    i++
+                } else {
+                    inQuotes = !inQuotes
+                }
+            } else if (ch == ',' && !inQuotes) {
+                tokens.add(current.toString())
+                current.setLength(0)
+            } else {
+                current.append(ch)
+            }
+            i++
+        }
+        tokens.add(current.toString())
+        return tokens
     }
 
     fun setDeviceName(context: Context, name: String) {

@@ -306,8 +306,6 @@ dependencies {
 
     implementation(libs.commons.io)
 
-    implementation(libs.univocity.parsers)
-
     // Kotlin
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
