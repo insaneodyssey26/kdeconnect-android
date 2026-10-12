@@ -68,6 +68,12 @@ class MainActivity : AppCompatActivity(), OnSharedPreferenceChangeListener {
         }
     }
 
+    val startActivityLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        CoroutineScope(Dispatchers.IO).launch {
+            KdeConnect.getInstance().devices.values.forEach(Device::reloadPluginsFromSettings)
+        }
+    }
+
     private lateinit var mNavViewDeviceName: TextView
 
     private var mCurrentDevice: String? = null
@@ -358,18 +364,6 @@ class MainActivity : AppCompatActivity(), OnSharedPreferenceChangeListener {
         super.onSaveInstanceState(outState)
         outState.putString(STATE_SELECTED_DEVICE, mCurrentDevice)
         outState.putInt(STATE_SELECTED_MENU_ENTRY, mCurrentMenuEntry)
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        when (requestCode) {
-            RESULT_NEEDS_RELOAD -> {
-                CoroutineScope(Dispatchers.IO).launch {
-                    KdeConnect.getInstance().devices.values.forEach(Device::reloadPluginsFromSettings)
-                }
-            }
-            else -> super.onActivityResult(requestCode, resultCode, data)
-        }
     }
 
     fun isPermissionGranted(permissions: Array<String>, grantResults: IntArray, permission : String) : Boolean {

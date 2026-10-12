@@ -42,8 +42,9 @@ class StartActivityAlertDialogFragment : AlertDialogFragment() {
                     Intent(intentAction)
                 }
 
-                if (startForResult) {
-                    requireActivity().startActivityForResult(intent, requestCode)
+                val mainActivity = activity as? MainActivity
+                if (startForResult && mainActivity != null) {
+                    mainActivity.startActivityLauncher.launch(intent)
                 } else {
                     requireActivity().startActivity(intent)
                 }
