@@ -9,7 +9,6 @@ package org.kde.kdeconnect.plugins.sftp
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.graphics.PorterDuff
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -18,6 +17,7 @@ import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.view.ActionMode
 import androidx.core.content.edit
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.util.set
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
@@ -86,7 +86,9 @@ class SftpSettingsFragment :
         }
 
         val addStoragePreference: Preference? = preferenceScreen.findPreference(getString(R.string.sftp_preference_key_add_storage))
-        addStoragePreference?.icon?.setColorFilter(colorAccent, PorterDuff.Mode.SRC_IN)
+        addStoragePreference?.icon?.let { icon ->
+            DrawableCompat.setTint(icon, colorAccent)
+        }
     }
 
     private fun addStoragePreferences(preferenceCategory: PreferenceCategory) {
