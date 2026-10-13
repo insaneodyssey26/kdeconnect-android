@@ -273,4 +273,26 @@ class DeviceTest {
 
         verify(exactly = 1) { pairingCallback.unpaired(device) }
     }
+
+    @Test
+    fun testDeviceNameInputFilter() {
+        // When valid characters (letters, numbers, spaces, allowed symbols) are passed, filter returns null to preserve IME composing state
+        Assert.assertNull(DeviceHelper.filterInvalidCharactersFromDeviceName("My Phone", 0, "My Phone".length))
+        Assert.assertNull(DeviceHelper.filterInvalidCharactersFromDeviceName("a", 0, 1))
+        Assert.assertNull(DeviceHelper.filterInvalidCharactersFromDeviceName("Pixel 7 Pro", 0, "Pixel 7 Pro".length))
+        Assert.assertNull(DeviceHelper.filterInvalidCharactersFromDeviceName("Phone-123_test", 0, "Phone-123_test".length))
+
+        // When invalid characters are present, they are stripped
+        val filteredWithPunctuation = DeviceHelper.filterInvalidCharactersFromDeviceName("Device: 1!", 0, "Device: 1!".length)
+        Assert.assertEquals("Device 1", filteredWithPunctuation.toString())
+
+        val filteredWithBracketsAndQuotes = DeviceHelper.filterInvalidCharactersFromDeviceName("My [Phone] 'Test' <2>", 0, "My [Phone] 'Test' <2>".length)
+        Assert.assertEquals("My Phone Test 2", filteredWithBracketsAndQuotes.toString())
+
+        // Subsequence ranges
+        val fullString = "Prefix: 'Valid' Suffix"
+        // Target "'Valid'" inside range [8, 15)
+        val filteredSub = DeviceHelper.filterInvalidCharactersFromDeviceName(fullString, 8, 15)
+        Assert.assertEquals("Valid", filteredSub.toString())
+    }
 }

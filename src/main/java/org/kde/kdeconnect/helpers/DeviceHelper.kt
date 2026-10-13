@@ -12,6 +12,9 @@ import android.os.Build
 import android.util.Log
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.TextUtils
 import com.univocity.parsers.common.TextParsingException
 import com.univocity.parsers.csv.CsvParser
 import com.univocity.parsers.csv.CsvParserSettings
@@ -155,4 +158,38 @@ object DeviceHelper {
 
     fun filterInvalidCharactersFromDeviceName(input: String): String = input.replace(NAME_INVALID_CHARACTERS_REGEX, "")
 
+    /**
+     * Filter implementation suitable for [android.text.InputFilter].
+     * Returns null if no characters are stripped to accept the replacement as-is
+     * and avoid breaking IME composing state/spans (which causes text duplication in Gboard/Samsung Keyboard).
+     */
+    fun filterInvalidCharactersFromDeviceName(source: CharSequence, start: Int, end: Int): CharSequence? {
+        var hasInvalidChar = false
+        for (i in start until end) {
+            val c = source[i]
+            if (c in "\"',;:.!?()[]<>") {
+                hasInvalidChar = true
+                break
+            }
+        }
+        if (!hasInvalidChar) {
+            return null
+        }
+
+        val filtered = StringBuilder(end - start)
+        for (i in start until end) {
+            val c = source[i]
+            if (c !in "\"',;:.!?()[]<>") {
+                filtered.append(c)
+            }
+        }
+
+        return if (source is Spanned) {
+            val sp = SpannableString(filtered)
+            TextUtils.copySpansFrom(source, start, filtered.length, null, sp, 0)
+            sp
+        } else {
+            filtered
+        }
+    }
 }
