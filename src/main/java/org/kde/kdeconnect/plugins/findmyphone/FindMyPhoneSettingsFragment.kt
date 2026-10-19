@@ -8,6 +8,7 @@ package org.kde.kdeconnect.plugins.findmyphone
 
 import android.Manifest
 import android.app.Activity
+import android.app.NotificationManager
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -32,9 +33,11 @@ class FindMyPhoneSettingsFragment : PluginSettingsFragment() {
 
     private lateinit var preferenceKeyRingtone: String
     private lateinit var preferenceKeyFlashlight: String
+    private lateinit var preferenceKeyDnd: String
     private lateinit var sharedPreferences: SharedPreferences
     private var ringtonePreference: Preference? = null
     private var flashlightPreference: SwitchPreference? = null
+    private var dndPreference: SwitchPreference? = null
 
     private val requestCameraPermission: ActivityResultLauncher<String> = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -77,10 +80,12 @@ class FindMyPhoneSettingsFragment : PluginSettingsFragment() {
 
         preferenceKeyRingtone = getString(R.string.findmyphone_preference_key_ringtone)
         preferenceKeyFlashlight = getString(R.string.findmyphone_preference_key_flashlight)
+        preferenceKeyDnd = getString(R.string.findmyphone_preference_key_dnd)
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireContext())
 
         ringtonePreference = preferenceScreen.findPreference(preferenceKeyRingtone)
         flashlightPreference = preferenceScreen.findPreference(preferenceKeyFlashlight)
+        dndPreference = preferenceScreen.findPreference(preferenceKeyDnd)
 
         setRingtoneSummary()
 
@@ -94,17 +99,45 @@ class FindMyPhoneSettingsFragment : PluginSettingsFragment() {
             }
             true
         }
+
+        dndPreference?.setOnPreferenceChangeListener { _, newValue ->
+            if (newValue == true) {
+                if (hasDndPermission()) {
+                    return@setOnPreferenceChangeListener true
+                }
+                val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+                return@setOnPreferenceChangeListener false
+            }
+            true
+        }
     }
 
     override fun onResume() {
         super.onResume()
         syncFlashlightPreferenceWithPermission()
+        syncDndPreferenceWithPermission()
     }
 
     private fun syncFlashlightPreferenceWithPermission() {
         val preferenceOn = sharedPreferences.getBoolean(preferenceKeyFlashlight, false)
         if (!hasCameraPermission() && preferenceOn) {
             setFlashlightEnabled(false)
+        }
+    }
+
+    private fun syncDndPreferenceWithPermission() {
+        val preferenceOn = sharedPreferences.getBoolean(preferenceKeyDnd, false)
+        if (hasDndPermission()) {
+            if (!preferenceOn) {
+                setDndEnabled(true)
+            }
+        } else {
+            if (preferenceOn) {
+                setDndEnabled(false)
+            }
         }
     }
 
@@ -115,11 +148,23 @@ class FindMyPhoneSettingsFragment : PluginSettingsFragment() {
         ) == PackageManager.PERMISSION_GRANTED
     }
 
+    private fun hasDndPermission(): Boolean {
+        val nm = ContextCompat.getSystemService(requireContext(), NotificationManager::class.java)
+        return nm?.isNotificationPolicyAccessGranted == true
+    }
+
     private fun setFlashlightEnabled(enabled: Boolean) {
         sharedPreferences.edit {
             putBoolean(preferenceKeyFlashlight, enabled)
         }
         flashlightPreference?.isChecked = enabled
+    }
+
+    private fun setDndEnabled(enabled: Boolean) {
+        sharedPreferences.edit {
+            putBoolean(preferenceKeyDnd, enabled)
+        }
+        dndPreference?.isChecked = enabled
     }
 
     private fun setRingtoneSummary() {
