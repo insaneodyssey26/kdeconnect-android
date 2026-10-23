@@ -130,14 +130,8 @@ class FindMyPhoneSettingsFragment : PluginSettingsFragment() {
 
     private fun syncDndPreferenceWithPermission() {
         val preferenceOn = sharedPreferences.getBoolean(preferenceKeyDnd, false)
-        if (hasDndPermission()) {
-            if (!preferenceOn) {
-                setDndEnabled(true)
-            }
-        } else {
-            if (preferenceOn) {
-                setDndEnabled(false)
-            }
+        if (!hasDndPermission() && preferenceOn) {
+            setDndEnabled(false)
         }
     }
 
