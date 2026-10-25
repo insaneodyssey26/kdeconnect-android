@@ -121,12 +121,12 @@ internal class MprisReceiverPlayer(
 
     fun canGoPrevious(): Boolean {
         val state = controller.playbackState ?: return false
-        return (state.actions and PlaybackState.ACTION_SKIP_TO_PREVIOUS) != 0L
+        return (state.actions and (PlaybackState.ACTION_SKIP_TO_PREVIOUS or PlaybackState.ACTION_REWIND)) != 0L
     }
 
     fun canGoNext(): Boolean {
         val state = controller.playbackState ?: return false
-        return (state.actions and PlaybackState.ACTION_SKIP_TO_NEXT) != 0L
+        return (state.actions and (PlaybackState.ACTION_SKIP_TO_NEXT or PlaybackState.ACTION_FAST_FORWARD)) != 0L
     }
 
     fun canSeek(): Boolean {
@@ -168,11 +168,21 @@ internal class MprisReceiverPlayer(
         }
 
     fun previous() {
-        controller.transportControls.skipToPrevious()
+        val actions = controller.playbackState?.actions ?: 0L
+        if ((actions and PlaybackState.ACTION_SKIP_TO_PREVIOUS) != 0L) {
+            controller.transportControls.skipToPrevious()
+        } else if ((actions and PlaybackState.ACTION_REWIND) != 0L) {
+            controller.transportControls.rewind()
+        }
     }
 
     fun next() {
-        controller.transportControls.skipToNext()
+        val actions = controller.playbackState?.actions ?: 0L
+        if ((actions and PlaybackState.ACTION_SKIP_TO_NEXT) != 0L) {
+            controller.transportControls.skipToNext()
+        } else if ((actions and PlaybackState.ACTION_FAST_FORWARD) != 0L) {
+            controller.transportControls.fastForward()
+        }
     }
 
     fun play() {
