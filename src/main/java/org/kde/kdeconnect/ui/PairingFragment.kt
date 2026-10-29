@@ -36,6 +36,7 @@ import org.kde.kdeconnect.KdeConnect
 import org.kde.kdeconnect.base.BaseFragment
 import org.kde.kdeconnect.helpers.TrustedNetworkHelper.Companion.isTrustedNetwork
 import org.kde.kdeconnect.ui.compose.KdeTheme
+import org.kde.kdeconnect.ui.compose.model.device.RejectedDeviceUiModel
 import org.kde.kdeconnect.ui.compose.screen.pairing.PairingScreen
 import org.kde.kdeconnect.ui.compose.screen.pairing.PairingViewModel
 import org.kde.kdeconnect_tp.R
@@ -149,6 +150,9 @@ class PairingFragment : BaseFragment<DevicesListBinding>() {
                                 localNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
                             }
                         },
+                        onAddCustomDeviceClick = { _ ->
+                            startActivity(Intent(mActivity, CustomDevicesActivity::class.java))
+                        },
                         onRefresh = { viewModel.onRefresh() }
                     )
                 }
@@ -219,6 +223,15 @@ class PairingFragment : BaseFragment<DevicesListBinding>() {
             }
 
             viewModel.updateDevices(devices = allDevices)
+
+            val rejectedList = KdeConnect.getInstance().getRejectedDevices().map {
+                RejectedDeviceUiModel(
+                    ipAddress = it.ipAddress.hostAddress ?: it.ipAddress.toString(),
+                    deviceName = it.deviceName,
+                    reason = it.reason
+                )
+            }
+            viewModel.updateRejectedDevices(rejectedList)
         } catch (_: IllegalStateException) {
             // Ignore: The activity was closed while we were trying to update it
         } finally {

@@ -22,6 +22,9 @@ abstract class BaseLinkProvider {
 
         @WorkerThread
         fun onConnectionLost(link: BaseLink)
+
+        @WorkerThread
+        fun onDeviceRejected(rejectedDevice: org.kde.kdeconnect.backends.lan.RejectedDevice) {}
     }
 
     private val connectionReceivers = CopyOnWriteArrayList<ConnectionReceiver>()
@@ -63,6 +66,16 @@ abstract class BaseLinkProvider {
     protected open fun onDeviceInfoUpdated(deviceInfo: DeviceInfo) {
         for (cr in connectionReceivers) {
             cr.onDeviceInfoUpdated(deviceInfo)
+        }
+    }
+
+    /**
+     * To be called from child classes when an incoming connection attempt was rejected.
+     */
+    @WorkerThread
+    protected open fun onDeviceRejected(rejectedDevice: org.kde.kdeconnect.backends.lan.RejectedDevice) {
+        for (cr in connectionReceivers) {
+            cr.onDeviceRejected(rejectedDevice)
         }
     }
 

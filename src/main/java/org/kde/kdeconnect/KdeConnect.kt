@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import org.kde.kdeconnect.PairingHandler.PairingCallback
 import org.kde.kdeconnect.backends.BaseLink
 import org.kde.kdeconnect.backends.BaseLinkProvider.ConnectionReceiver
+import org.kde.kdeconnect.backends.lan.RejectedDevice
 import org.kde.kdeconnect.helpers.DeviceHelper
 import org.kde.kdeconnect.helpers.LifecycleHelper
 import org.kde.kdeconnect.helpers.NotificationHelper
@@ -49,6 +50,31 @@ class KdeConnect : Application() {
     val devices: ConcurrentHashMap<String, Device> = ConcurrentHashMap()
 
     private val deviceListChangedCallbacks = ConcurrentHashMap<String, DeviceListChangedCallback>()
+
+    private val rejectedDevices = ConcurrentHashMap<String, RejectedDevice>()
+
+    fun getRejectedDevices(): List<RejectedDevice> {
+        pruneExpiredRejectedDevices()
+        return rejectedDevices.values.toList()
+    }
+
+    private fun pruneExpiredRejectedDevices() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        rejectedDevices.entries.removeIf { now - it.value.timestamp > REJECTED_DEVICE_TTL_MS }
+    }
+
+    private fun recordRejectedDevice(rejected: RejectedDevice) {
+        pruneExpiredRejectedDevices()
+        if (rejectedDevices.size >= MAX_REJECTED_DEVICES) {
+            val oldestKey = rejectedDevices.minByOrNull { it.value.timestamp }?.key
+            if (oldestKey != null) {
+                rejectedDevices.remove(oldestKey)
+            }
+        }
+        val key = rejected.ipAddress.hostAddress ?: rejected.ipAddress.toString()
+        rejectedDevices[key] = rejected
+        onDeviceListChanged()
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -223,6 +249,11 @@ class KdeConnect : Application() {
                 onDeviceListChanged()
             }
         }
+
+        @WorkerThread
+        override fun onDeviceRejected(rejectedDevice: RejectedDevice) {
+            recordRejectedDevice(rejectedDevice)
+        }
     }
 
     fun scheduleForDeletion(device: Device) {
@@ -252,6 +283,9 @@ class KdeConnect : Application() {
     }
 
     companion object {
+        private const val REJECTED_DEVICE_TTL_MS = 30_000L
+        private const val MAX_REJECTED_DEVICES = 10
+
         private lateinit var _instance: KdeConnect
 
         fun getInstance(): KdeConnect = _instance

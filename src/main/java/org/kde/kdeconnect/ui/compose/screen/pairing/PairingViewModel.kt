@@ -20,6 +20,7 @@ import org.kde.kdeconnect.BackgroundService.Companion.ForceRefreshConnections
 import org.kde.kdeconnect.Device
 import org.kde.kdeconnect.ui.compose.extensions.device.toUiModel
 import org.kde.kdeconnect.ui.compose.model.device.DeviceUiModel
+import org.kde.kdeconnect.ui.compose.model.device.RejectedDeviceUiModel
 
 class PairingViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -98,6 +99,12 @@ class PairingViewModel(application: Application) : AndroidViewModel(application)
                 )
             }
         }
+
+    fun updateRejectedDevices(rejectedDevices: List<RejectedDeviceUiModel>) {
+        _pairingUiState.update { state ->
+            state.copy(rejectedDevices = rejectedDevices)
+        }
+    }
 
     fun onRefresh() {
         _pairingUiState.update { uiState -> uiState.copy(isRefreshing = true) }
