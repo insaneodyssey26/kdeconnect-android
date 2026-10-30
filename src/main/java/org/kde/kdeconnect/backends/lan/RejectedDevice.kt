@@ -18,5 +18,6 @@ data class RejectedDevice(
     val ipAddress: InetAddress,
     val deviceName: String?,
     val reason: RejectionReason,
+    val deviceId: String? = null,
     val timestamp: Long = SystemClock.elapsedRealtime()
 )

@@ -71,7 +71,8 @@ class KdeConnect : Application() {
                 rejectedDevices.remove(oldestKey)
             }
         }
-        val key = rejected.ipAddress.hostAddress ?: rejected.ipAddress.toString()
+        val cleanIp = rejected.ipAddress.hostAddress?.removePrefix("/") ?: rejected.ipAddress.toString().removePrefix("/")
+        val key = rejected.deviceId ?: cleanIp
         rejectedDevices[key] = rejected
         onDeviceListChanged()
     }

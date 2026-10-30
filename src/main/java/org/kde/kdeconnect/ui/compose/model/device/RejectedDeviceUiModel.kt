@@ -9,6 +9,7 @@ package org.kde.kdeconnect.ui.compose.model.device
 import org.kde.kdeconnect.backends.lan.RejectionReason
 
 data class RejectedDeviceUiModel(
+    val id: String,
     val ipAddress: String,
     val deviceName: String?,
     val reason: RejectionReason

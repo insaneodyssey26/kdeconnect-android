@@ -20,12 +20,14 @@ class RejectedDeviceTest {
         val rejected = RejectedDevice(
             ipAddress = ip,
             deviceName = "Remote Laptop",
-            reason = RejectionReason.NON_PRIVATE_IP
+            reason = RejectionReason.NON_PRIVATE_IP,
+            deviceId = "dev_12345"
         )
 
         assertEquals(ip, rejected.ipAddress)
         assertEquals("Remote Laptop", rejected.deviceName)
         assertEquals(RejectionReason.NON_PRIVATE_IP, rejected.reason)
+        assertEquals("dev_12345", rejected.deviceId)
         assertNotNull(rejected.timestamp)
     }
 

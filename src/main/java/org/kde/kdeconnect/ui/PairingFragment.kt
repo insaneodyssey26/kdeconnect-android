@@ -153,6 +153,9 @@ class PairingFragment : BaseFragment<DevicesListBinding>() {
                         onAddCustomDeviceClick = { _ ->
                             startActivity(Intent(mActivity, CustomDevicesActivity::class.java))
                         },
+                        onTrustedNetworksClick = {
+                            startActivity(Intent(mActivity, TrustedNetworksActivity::class.java))
+                        },
                         onRefresh = { viewModel.onRefresh() }
                     )
                 }
@@ -225,8 +228,10 @@ class PairingFragment : BaseFragment<DevicesListBinding>() {
             viewModel.updateDevices(devices = allDevices)
 
             val rejectedList = KdeConnect.getInstance().getRejectedDevices().map {
+                val cleanIp = it.ipAddress.hostAddress?.removePrefix("/") ?: it.ipAddress.toString().removePrefix("/")
                 RejectedDeviceUiModel(
-                    ipAddress = it.ipAddress.hostAddress ?: it.ipAddress.toString(),
+                    id = it.deviceId ?: cleanIp,
+                    ipAddress = cleanIp,
                     deviceName = it.deviceName,
                     reason = it.reason
                 )

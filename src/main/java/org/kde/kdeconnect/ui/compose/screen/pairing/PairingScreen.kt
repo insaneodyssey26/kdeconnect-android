@@ -63,6 +63,7 @@ fun PairingScreen(
     onNotificationSettingsClick: () -> Unit = {},
     onLocalNetworkPermissionClick: () -> Unit = {},
     onAddCustomDeviceClick: ((String) -> Unit)? = null,
+    onTrustedNetworksClick: (() -> Unit)? = null,
     onRefresh: () -> Unit = {}
 ) {
     val lazyListState = rememberLazyListState()
@@ -77,6 +78,7 @@ fun PairingScreen(
         onNotificationSettingsClick = onNotificationSettingsClick,
         onLocalNetworkPermissionClick = onLocalNetworkPermissionClick,
         onAddCustomDeviceClick = onAddCustomDeviceClick,
+        onTrustedNetworksClick = onTrustedNetworksClick,
         onRefresh = onRefresh
     )
 }
@@ -91,6 +93,7 @@ private fun PairingScreenContent(
     onNotificationSettingsClick: () -> Unit,
     onLocalNetworkPermissionClick: () -> Unit,
     onAddCustomDeviceClick: ((String) -> Unit)? = null,
+    onTrustedNetworksClick: (() -> Unit)? = null,
     onRefresh: () -> Unit = {}
 ) {
     PullToRefreshBox(
@@ -183,10 +186,11 @@ private fun PairingScreenContent(
                 }
                 itemsIndexed(
                     items = uiState.rejectedDevices,
-                    key = { _, rejectedDevice -> rejectedDevice.ipAddress }) { _, rejectedDevice ->
+                    key = { _, rejectedDevice -> rejectedDevice.id }) { _, rejectedDevice ->
                     RejectedDeviceCard(
                         rejectedDevice = rejectedDevice,
-                        onAddCustomDevice = onAddCustomDeviceClick
+                        onAddCustomDevice = onAddCustomDeviceClick,
+                        onTrustedNetworks = onTrustedNetworksClick
                     )
                 }
             }
@@ -348,8 +352,14 @@ private fun PairingScreenCardContent(device: DeviceUiModel) {
 @Composable
 private fun RejectedDeviceCard(
     rejectedDevice: RejectedDeviceUiModel,
-    onAddCustomDevice: ((String) -> Unit)?
+    onAddCustomDevice: ((String) -> Unit)?,
+    onTrustedNetworks: (() -> Unit)?
 ) {
+    val onCardClick: (() -> Unit)? = when (rejectedDevice.reason) {
+        RejectionReason.NON_PRIVATE_IP -> onAddCustomDevice?.let { { it(rejectedDevice.ipAddress) } }
+        RejectionReason.UNTRUSTED_NETWORK -> onTrustedNetworks
+    }
+
     KdeCard(
         modifier = Modifier.fillMaxWidth(),
         content = {
@@ -392,19 +402,30 @@ private fun RejectedDeviceCard(
                     fontSize = 14.sp
                 )
 
-                if (onAddCustomDevice != null && rejectedDevice.reason == RejectionReason.NON_PRIVATE_IP) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    KdeButton(
-                        onClick = { onAddCustomDevice(rejectedDevice.ipAddress) },
-                        text = stringResource(id = R.string.action_add_custom_device)
-                    )
+                when (rejectedDevice.reason) {
+                    RejectionReason.NON_PRIVATE_IP -> {
+                        if (onAddCustomDevice != null) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            KdeButton(
+                                onClick = { onAddCustomDevice(rejectedDevice.ipAddress) },
+                                text = stringResource(id = R.string.action_add_custom_device)
+                            )
+                        }
+                    }
+                    RejectionReason.UNTRUSTED_NETWORK -> {
+                        if (onTrustedNetworks != null) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            KdeButton(
+                                onClick = { onTrustedNetworks() },
+                                text = stringResource(id = R.string.action_trusted_networks)
+                            )
+                        }
+                    }
                 }
             }
         },
         onClick = {
-            if (onAddCustomDevice != null && rejectedDevice.reason == RejectionReason.NON_PRIVATE_IP) {
-                onAddCustomDevice(rejectedDevice.ipAddress)
-            }
+            onCardClick?.invoke()
         }
     )
 }
