@@ -19,6 +19,7 @@ import android.os.Build
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
@@ -42,6 +43,7 @@ class FindMyPhonePlugin : Plugin() {
     private lateinit var flashlightManager: FlashlightManager
     private var mediaPlayer: MediaPlayer? = null
     private var previousVolume: Int = -1
+    private var previousInterruptionFilter: Int = -1
     private val notificationId: Int = SystemClock.elapsedRealtime().toInt()
 
     override val displayName: String
@@ -158,6 +160,14 @@ class FindMyPhonePlugin : Plugin() {
     fun startPlaying() {
         val player = mediaPlayer ?: return
         if (!player.isPlaying) {
+            if (isDndOverrideEnabled()) {
+                try {
+                    previousInterruptionFilter = notificationManager.currentInterruptionFilter
+                    notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+                } catch (e: SecurityException) {
+                    Log.w("FindMyPhonePlugin", "Unable to override DND interruption filter", e)
+                }
+            }
             previousVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
             audioManager.setStreamVolume(AudioManager.STREAM_ALARM, audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0)
             player.start()
@@ -177,6 +187,14 @@ class FindMyPhonePlugin : Plugin() {
     fun stopPlaying() {
         if (previousVolume != -1) {
             audioManager.setStreamVolume(AudioManager.STREAM_ALARM, previousVolume, 0)
+        }
+        if (previousInterruptionFilter != -1) {
+            try {
+                notificationManager.setInterruptionFilter(previousInterruptionFilter)
+            } catch (e: SecurityException) {
+                Log.w("FindMyPhonePlugin", "Unable to restore DND interruption filter", e)
+            }
+            previousInterruptionFilter = -1
         }
         mediaPlayer?.let { player ->
             player.stop()
@@ -213,6 +231,11 @@ class FindMyPhonePlugin : Plugin() {
 
     private fun isFlashlightEnabledInSettings(): Boolean {
         return preferences.getBoolean(context.getString(R.string.findmyphone_preference_key_flashlight), false)
+    }
+
+    private fun isDndOverrideEnabled(): Boolean {
+        val prefEnabled = preferences.getBoolean(context.getString(R.string.findmyphone_preference_key_dnd), false)
+        return prefEnabled && notificationManager.isNotificationPolicyAccessGranted
     }
 
     companion object {

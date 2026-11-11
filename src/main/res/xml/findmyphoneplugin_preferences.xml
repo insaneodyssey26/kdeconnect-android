@@ -21,4 +21,10 @@ SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted
         android:title="@string/findmyphone_preference_title_flashlight"
         android:summary="@string/findmyphone_camera_explanation"
         android:defaultValue="false" />
+
+    <SwitchPreference
+        android:key="@string/findmyphone_preference_key_dnd"
+        android:title="@string/findmyphone_preference_title_dnd"
+        android:summary="@string/findmyphone_dnd_explanation"
+        android:defaultValue="false" />
 </PreferenceScreen>
