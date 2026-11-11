@@ -41,7 +41,9 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.kde.kdeconnect.backends.lan.RejectionReason
 import org.kde.kdeconnect.extensions.safeDrawingBottomPadding
+import org.kde.kdeconnect.ui.compose.KdeButton
 import org.kde.kdeconnect.ui.compose.KdeTheme
 import org.kde.kdeconnect.ui.compose.components.KdeBodyLargeText
 import org.kde.kdeconnect.ui.compose.components.KdeBodyMediumText
@@ -50,6 +52,7 @@ import org.kde.kdeconnect.ui.compose.components.KdeCard
 import org.kde.kdeconnect.ui.compose.components.KdeThemePreviews
 import org.kde.kdeconnect.ui.compose.components.SectionHeader
 import org.kde.kdeconnect.ui.compose.model.device.DeviceUiModel
+import org.kde.kdeconnect.ui.compose.model.device.RejectedDeviceUiModel
 import org.kde.kdeconnect_tp.R
 
 @Composable
@@ -59,6 +62,8 @@ fun PairingScreen(
     onWifiSettingsClick: () -> Unit = {},
     onNotificationSettingsClick: () -> Unit = {},
     onLocalNetworkPermissionClick: () -> Unit = {},
+    onAddCustomDeviceClick: ((String) -> Unit)? = null,
+    onTrustedNetworksClick: (() -> Unit)? = null,
     onRefresh: () -> Unit = {}
 ) {
     val lazyListState = rememberLazyListState()
@@ -72,6 +77,8 @@ fun PairingScreen(
         onWifiSettingsClick = onWifiSettingsClick,
         onNotificationSettingsClick = onNotificationSettingsClick,
         onLocalNetworkPermissionClick = onLocalNetworkPermissionClick,
+        onAddCustomDeviceClick = onAddCustomDeviceClick,
+        onTrustedNetworksClick = onTrustedNetworksClick,
         onRefresh = onRefresh
     )
 }
@@ -85,6 +92,8 @@ private fun PairingScreenContent(
     onWifiSettingsClick: () -> Unit,
     onNotificationSettingsClick: () -> Unit,
     onLocalNetworkPermissionClick: () -> Unit,
+    onAddCustomDeviceClick: ((String) -> Unit)? = null,
+    onTrustedNetworksClick: (() -> Unit)? = null,
     onRefresh: () -> Unit = {}
 ) {
     PullToRefreshBox(
@@ -163,6 +172,25 @@ private fun PairingScreenContent(
                     CardContent(
                         device = rememberedDevice,
                         onClick = onClick
+                    )
+                }
+            }
+
+            // Ignored / Rejected devices
+            if (uiState.rejectedDevices.isNotEmpty()) {
+                item {
+                    SectionHeader(title = stringResource(id = R.string.category_rejected_devices))
+                }
+                item {
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+                itemsIndexed(
+                    items = uiState.rejectedDevices,
+                    key = { _, rejectedDevice -> rejectedDevice.id }) { _, rejectedDevice ->
+                    RejectedDeviceCard(
+                        rejectedDevice = rejectedDevice,
+                        onAddCustomDevice = onAddCustomDeviceClick,
+                        onTrustedNetworks = onTrustedNetworksClick
                     )
                 }
             }
@@ -319,6 +347,87 @@ private fun PairingScreenCardContent(device: DeviceUiModel) {
             }
         }
     }
+}
+
+@Composable
+private fun RejectedDeviceCard(
+    rejectedDevice: RejectedDeviceUiModel,
+    onAddCustomDevice: ((String) -> Unit)?,
+    onTrustedNetworks: (() -> Unit)?
+) {
+    val onCardClick: (() -> Unit)? = when (rejectedDevice.reason) {
+        RejectionReason.NON_PRIVATE_IP -> onAddCustomDevice?.let { { it(rejectedDevice.ipAddress) } }
+        RejectionReason.UNTRUSTED_NETWORK -> onTrustedNetworks
+    }
+
+    KdeCard(
+        modifier = Modifier.fillMaxWidth(),
+        content = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_warning),
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(color = MaterialTheme.colorScheme.error),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    KdeBodyLargeText(
+                        text = rejectedDevice.deviceName ?: rejectedDevice.ipAddress,
+                        fontSize = 18.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                val reasonText = when (rejectedDevice.reason) {
+                    RejectionReason.NON_PRIVATE_IP -> stringResource(
+                        id = R.string.rejected_device_non_private_ip,
+                        rejectedDevice.ipAddress
+                    )
+                    RejectionReason.UNTRUSTED_NETWORK -> stringResource(
+                        id = R.string.rejected_device_untrusted_network
+                    )
+                }
+
+                KdeBodySmallText(
+                    text = reasonText,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 14.sp
+                )
+
+                when (rejectedDevice.reason) {
+                    RejectionReason.NON_PRIVATE_IP -> {
+                        if (onAddCustomDevice != null) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            KdeButton(
+                                onClick = { onAddCustomDevice(rejectedDevice.ipAddress) },
+                                text = stringResource(id = R.string.action_add_custom_device)
+                            )
+                        }
+                    }
+                    RejectionReason.UNTRUSTED_NETWORK -> {
+                        if (onTrustedNetworks != null) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            KdeButton(
+                                onClick = { onTrustedNetworks() },
+                                text = stringResource(id = R.string.action_trusted_networks)
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        onClick = {
+            onCardClick?.invoke()
+        }
+    )
 }
 
 @KdeThemePreviews

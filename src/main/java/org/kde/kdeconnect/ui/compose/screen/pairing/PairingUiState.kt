@@ -7,6 +7,7 @@
 package org.kde.kdeconnect.ui.compose.screen.pairing
 
 import org.kde.kdeconnect.ui.compose.model.device.DeviceUiModel
+import org.kde.kdeconnect.ui.compose.model.device.RejectedDeviceUiModel
 
 data class PairingUiState(
     val isWifiAvailable: Boolean,
@@ -17,5 +18,6 @@ data class PairingUiState(
     val connected: List<DeviceUiModel>,
     val available: List<DeviceUiModel>,
     val remembered: List<DeviceUiModel>,
+    val rejectedDevices: List<RejectedDeviceUiModel> = emptyList(),
     val isRefreshing: Boolean = false
 )

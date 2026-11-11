@@ -133,6 +133,10 @@ class LanLinkProvider(private val context: Context) : BaseLinkProvider() {
         val deviceTrusted = TrustedDevices.isTrustedDevice(context, deviceId)
         if (!deviceTrusted && !TrustedNetworkHelper.isTrustedNetwork(context)) {
             Log.i("KDE/LanLinkProvider", "Ignoring identity packet because the device is not trusted and I'm not on a trusted network.")
+            val ip = (identityPacket.getStringOrNull("tcpAddress") ?: "").let { runCatching { InetAddress.getByName(it) }.getOrNull() }
+            if (ip != null) {
+                onDeviceRejected(RejectedDevice(ip, identityPacket.getStringOrNull("deviceName"), RejectionReason.UNTRUSTED_NETWORK, deviceId))
+            }
             return null
         }
 
@@ -153,6 +157,7 @@ class LanLinkProvider(private val context: Context) : BaseLinkProvider() {
 
         if (!isAllowedAddress(address)) {
             Log.i("LanLinkProvider", "Discarding TCP packet from a non-local IP: $address")
+            onDeviceRejected(RejectedDevice(address, null, RejectionReason.NON_PRIVATE_IP))
             socket.closeSafe()
             return
         }
@@ -190,6 +195,15 @@ class LanLinkProvider(private val context: Context) : BaseLinkProvider() {
         }
 
         identityPacketReceived(identityPacket, socket, ConnectionStarted.Locally, deviceTrusted)
+    }
+
+    private fun peekDeviceIdentity(message: String): Pair<String?, String?> {
+        return try {
+            val packet = NetworkPacket.unserialize(message)
+            Pair(packet.getStringOrNull("deviceId"), packet.getStringOrNull("deviceName"))
+        } catch (_: Exception) {
+            Pair(null, null)
+        }
     }
 
     private fun isAllowedAddress(address: InetAddress): Boolean {
@@ -232,12 +246,14 @@ class LanLinkProvider(private val context: Context) : BaseLinkProvider() {
             return
         }
 
+        val message = String(packet.data, 0, packet.length, Charsets.UTF_8)
+
         if (!isAllowedAddress(address)) {
             Log.i("LanLinkProvider", "Discarding UDP packet from a non-local IP: $address")
+            val (deviceId, deviceName) = peekDeviceIdentity(message)
+            onDeviceRejected(RejectedDevice(address, deviceName, RejectionReason.NON_PRIVATE_IP, deviceId))
             return
         }
-
-        val message = String(packet.data, 0, packet.length, Charsets.UTF_8)
 
         val (identityPacket, deviceTrusted) = unserializeReceivedIdentityPacket(message)
             ?: return
