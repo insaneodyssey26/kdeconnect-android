@@ -16,6 +16,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityManager
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.StringRes
 import androidx.annotation.UiThread
@@ -26,7 +27,9 @@ import androidx.core.content.getSystemService
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.launch
 import org.kde.kdeconnect.BackgroundService
 import org.kde.kdeconnect.Device
 import org.kde.kdeconnect.Device.PluginsChangedListener
@@ -34,10 +37,12 @@ import org.kde.kdeconnect.KdeConnect
 import org.kde.kdeconnect.PairingHandler
 import org.kde.kdeconnect.base.BaseFragment
 import org.kde.kdeconnect.extensions.setupBottomPadding
+import org.kde.kdeconnect.helpers.WakeOnLanHelper
 import org.kde.kdeconnect.helpers.security.SslHelper
 import org.kde.kdeconnect.plugins.Plugin
 import org.kde.kdeconnect.plugins.battery.BatteryPlugin
 import org.kde.kdeconnect.plugins.connectivityreport.ConnectivityReportPlugin
+import org.kde.kdeconnect.plugins.wakeonlan.WakeOnLanPlugin
 import org.kde.kdeconnect.ui.compose.KdeTheme
 import org.kde.kdeconnect.ui.compose.screen.device.DeviceErrorScreen
 import org.kde.kdeconnect.ui.compose.screen.device.DevicePairingScreen
@@ -267,10 +272,24 @@ class DeviceFragment : BaseFragment<ActivityDeviceBinding>() {
                                 )
                                 displayBatteryInfoIfPossible()
                             } else {
+                                val wolPlugin = device.getPlugin<WakeOnLanPlugin>()
+                                val mac = wolPlugin?.savedMacAddress
+                                val isConnectedToWifi = BackgroundService.instance?.isConnectedToNonCellularNetwork?.value ?: true
+                                val onWakeUp: (() -> Unit)? = if (!mac.isNullOrEmpty() && isConnectedToWifi) {
+                                    {
+                                        lifecycleScope.launch {
+                                            WakeOnLanHelper.sendMagicPacket(mac)
+                                            Toast.makeText(requireContext(), R.string.wake_device_sent, Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                } else {
+                                    null
+                                }
                                 DeviceErrorScreen(
                                     message = stringResource(id = R.string.unreachable_description),
                                     isRefreshing = isRefreshing,
-                                    onRefresh = { refreshDevicesAction() }
+                                    onRefresh = { refreshDevicesAction() },
+                                    onWakeUp = onWakeUp
                                 )
                             }
                         }

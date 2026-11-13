@@ -8,12 +8,19 @@ package org.kde.kdeconnect.ui.compose.screen.device
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,9 +29,11 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.kde.kdeconnect.ui.compose.KdeTheme
 import org.kde.kdeconnect.ui.compose.components.KdeBodyLargeText
+import org.kde.kdeconnect.ui.compose.components.KdeBodySmallText
 import org.kde.kdeconnect.ui.compose.components.KdeThemePreviews
 import org.kde.kdeconnect_tp.R
 
@@ -32,12 +41,14 @@ import org.kde.kdeconnect_tp.R
 fun DeviceErrorScreen(
     message: String,
     isRefreshing: Boolean,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    onWakeUp: (() -> Unit)? = null
 ) {
     DeviceErrorScreenContent(
         message = message,
         isRefreshing = isRefreshing,
-        onRefresh = onRefresh
+        onRefresh = onRefresh,
+        onWakeUp = onWakeUp
     )
 }
 
@@ -45,31 +56,55 @@ fun DeviceErrorScreen(
 private fun DeviceErrorScreenContent(
     message: String,
     isRefreshing: Boolean,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    onWakeUp: (() -> Unit)? = null
 ) {
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
         modifier = Modifier.fillMaxSize()
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(state = rememberScrollState())
                 .padding(all = 16.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_error_outline_48dp),
-                contentDescription = null,
-                colorFilter = ColorFilter.tint(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            KdeBodyLargeText(
-                text = message,
-                modifier = Modifier.weight(1f)
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_error_outline_48dp),
+                    contentDescription = null,
+                    colorFilter = ColorFilter.tint(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                KdeBodyLargeText(
+                    text = message,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            if (onWakeUp != null) {
+                Button(
+                    onClick = onWakeUp,
+                    modifier = Modifier.padding(top = 24.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_power_settings_new_24dp),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(id = R.string.wake_device))
+                }
+                KdeBodySmallText(
+                    text = stringResource(id = R.string.wake_device_hint),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 8.dp, start = 16.dp, end = 16.dp)
+                )
+            }
         }
     }
 }
@@ -81,7 +116,8 @@ private fun DeviceErrorScreenPreview() {
         DeviceErrorScreenContent(
             message = stringResource(id = R.string.unreachable_description),
             isRefreshing = false,
-            onRefresh = { /* Do nothing */ }
+            onRefresh = { /* Do nothing */ },
+            onWakeUp = { /* Do nothing */ }
         )
     }
 }
