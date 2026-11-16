@@ -58,5 +58,13 @@ class WakeOnLanPluginTest {
         val handled = plugin.onPacketReceived(packet)
         assertTrue(handled)
         assertEquals("00:11:22:33:44:55", plugin.savedMacAddress)
+
+        // Empty/null MAC address should clear the saved MAC address
+        val clearPacket = NetworkPacket("kdeconnect.wakeonlan").apply {
+            this["macAddress"] = ""
+        }
+        val clearHandled = plugin.onPacketReceived(clearPacket)
+        assertTrue(clearHandled)
+        assertNull(plugin.savedMacAddress)
     }
 }

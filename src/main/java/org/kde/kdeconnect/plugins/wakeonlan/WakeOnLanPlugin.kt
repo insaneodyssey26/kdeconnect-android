@@ -33,9 +33,11 @@ class WakeOnLanPlugin : Plugin() {
     override fun onPacketReceived(np: NetworkPacket): Boolean {
         if (np.type == PACKET_TYPE_WAKEONLAN) {
             val mac = np.getStringOrNull(KEY_MAC_ADDRESS)
-            if (!mac.isNullOrEmpty()) {
-                preferences.edit {
+            preferences.edit {
+                if (!mac.isNullOrEmpty()) {
                     putString(KEY_MAC_ADDRESS, mac)
+                } else {
+                    remove(KEY_MAC_ADDRESS)
                 }
             }
             return true
